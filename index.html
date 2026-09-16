@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS - Voice Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(22, 33, 62, 0.9);
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #aaa;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .language-selector {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .lang-btn {
+            padding: 10px 18px;
+            border: 2px solid #4CAF50;
+            background: transparent;
+            color: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .lang-btn.active {
+            background: #4CAF50;
+            color: #1a1a2e;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+        }
+
+        .lang-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(76, 175, 80, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .btn-record {
+            padding: 22px 30px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: #fff;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            width: 100%;
+        }
+
+        .btn-record:hover:not(.listening) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(76, 175, 80, 0.6);
+        }
+
+        .btn-record:active:not(.listening) {
+            transform: translateY(0);
+        }
+
+        .btn-record.listening {
+            background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%);
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 15px rgba(255, 87, 34, 0.4); }
+            50% { box-shadow: 0 4px 30px rgba(255, 87, 34, 0.8); }
+        }
+
+        .display {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .display-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .display-text {
+            font-size: 16px;
+            color: #4CAF50;
+            font-style: italic;
+            min-height: 35px;
+            line-height: 1.4;
+        }
+
+        .response {
+            background: rgba(76, 175, 80, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4CAF50;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .response.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .response-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .response-text {
+            font-size: 16px;
+            color: #fff;
+            line-height: 1.6;
+        }
+
+        .loading {
+            display: none;
+            font-size: 14px;
+            color: #4CAF50;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: spin 1s infinite;
+        }
+
+        @keyframes spin {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.6); opacity: 0.6; }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            padding-top: 20px;
+            border-top: 1px solid rgba(76, 175, 80, 0.2);
+        }
+
+        .error-msg {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 4px solid #f44336;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            color: #ff9999;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .title {
+                font-size: 40px;
+            }
+
+            .btn-record {
+                padding: 18px;
+                font-size: 16px;
+            }
+
+            .language-selector {
+                gap: 8px;
+            }
+
+            .lang-btn {
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🤖 JARVIS</div>
+            <div class="subtitle">Voice Assistant</div>
+        </div>
+
+        <div class="language-selector">
+            <button class="lang-btn active" data-lang="en">🇬🇧 English</button>
+            <button class="lang-btn" data-lang="ru">🇷🇺 Русский</button>
+            <button class="lang-btn" data-lang="kk">🇰🇿 Қазақ</button>
+            <button class="lang-btn" data-lang="es">🇪🇸 Español</button>
+        </div>
+
+        <div class="controls">
+            <button class="btn-record" id="recordBtn">
+                🎤 Tap to Speak
+            </button>
+
+            <div class="display">
+                <div class="display-label">You said:</div>
+                <div class="display-text" id="userText">Ready to listen...</div>
+                <div class="loading" id="loading">
+                    <span class="spinner"></span><span>Processing...</span>
+                </div>
+            </div>
+
+            <div class="response" id="response">
+                <div class="response-label">JARVIS:</div>
+                <div class="response-text" id="responseText"></div>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <div class="footer">
+            💡 Click microphone button and speak clearly
+        </div>
+    </div>
+
+    <script>
+        // Глобальные переменные
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let selectedLang = 'en';
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+        // Языки для Web Speech API
+        const langCodes = {
+            'en': 'en-US',
+            'ru': 'ru-RU',
+            'kk': 'kk-KZ',
+            'es': 'es-ES'
+        };
+
+        // Команды и ответы
+        const commands = {
+            'time': {
+                'en': ['what time', 'tell time', 'current time', 'what is the time'],
+                'ru': ['какое время', 'скажи время', 'который час', 'текущее время'],
+                'kk': ['қай сағат', 'сағатын айт', 'ағымды сағат'],
+                'es': ['qué hora', 'hora actual', 'dime la hora']
+            },
+            'date': {
+                'en': ['what date', 'today', 'current date', 'what is today'],
+                'ru': ['какая дата', 'сегодня', 'текущая дата', 'какой сегодня день'],
+                'kk': ['қай күн', 'бүгін', 'ағымды күні'],
+                'es': ['qué fecha', 'hoy', 'fecha actual']
+            },
+            'hello': {
+                'en': ['hello', 'hi', 'hey', 'good morning', 'good afternoon'],
+                'ru': ['привет', 'здравствуй', 'добрый день', 'добрый утро'],
+                'kk': ['сәлем', 'привет', 'өндіктеп'],
+                'es': ['hola', 'buenos días', 'buenas tardes']
+            },
+            'help': {
+                'en': ['help', 'what can you do', 'commands', 'tell me commands'],
+                'ru': ['помощь', 'что ты умеешь', 'команды', 'какие команды'],
+                'kk': ['көмек', 'сен не істей аласың', 'командалар'],
+                'es': ['ayuda', 'qué puedes hacer', 'comandos']
+            }
+        };
+
+        // Выбор языка
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedLang = btn.dataset.lang;
+                recognition.lang = langCodes[selectedLang];
+                showMessage('userText', 'Ready to listen...', false);
+                document.getElementById('response').classList.remove('active');
+            });
+        });
+
+        // Кнопка записи
+        document.getElementById('recordBtn').addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        function startRecording() {
+            isRecording = true;
+            const btn = document.getElementById('recordBtn');
+            btn.classList.add('listening');
+            btn.textContent = '🎤 Listening...';
+            
+            hideError();
+            recognition.start();
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            const btn = document.getElementById('recordBtn');
+            btn.classList.remove('listening');
+            btn.textContent = '🎤 Tap to Speak';
+            
+            document.getElementById('loading').classList.add('active');
+        }
+
+        // Web Speech API
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = langCodes['en'];
+
+        recognition.onstart = () => {
+            console.log('Recording started');
+        };
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            
+            showMessage('userText', transcript);
+            processCommand(transcript);
+            stopRecording();
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Error:', event.error);
+            let errorText = 'Error: ' + event.error;
+            
+            if (event.error === 'no-speech') {
+                errorText = 'No speech detected. Please try again.';
+            } else if (event.error === 'network') {
+                errorText = 'Network error. Check your internet connection.';
+            } else if (event.error === 'not-allowed') {
+                errorText = 'Microphone access denied. Please allow microphone access.';
+            }
+            
+            showError(errorText);
+            document.getElementById('loading').classList.remove('active');
+            isRecording = false;
+            const btn = document.getElementById('recordBtn');
+            btn.classList.remove('listening');
+            btn.textContent = '🎤 Tap to Speak';
+        };
+
+        recognition.onend = () => {
+            console.log('Recording ended');
+        };
+
+        // Обработка команд
+        function processCommand(text) {
+            const lowerText = text.toLowerCase();
+            
+            for (const [cmd, langs] of Object.entries(commands)) {
+                const keywords = langs[selectedLang] || [];
+                for (const keyword of keywords) {
+                    if (lowerText.includes(keyword)) {
+                        let response = '';
+                        
+                        if (cmd === 'time') {
+                            const time = new Date().toLocaleTimeString(langCodes[selectedLang], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
+                            const responses = {
+                                'en': `The current time is ${time}.`,
+                                'ru': `Текущее время: ${time}.`,
+                                'kk': `Ағымды сағат: ${time}.`,
+                                'es': `La hora actual es ${time}.`
+                            };
+                            response = responses[selectedLang];
+                        } 
+                        else if (cmd === 'date') {
+                            const date = new Date().toLocaleDateString(langCodes[selectedLang], { 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            });
+                            const responses = {
+                                'en': `Today is ${date}.`,
+                                'ru': `Сегодня ${date}.`,
+                                'kk': `Бүгін ${date}.`,
+                                'es': `Hoy es ${date}.`
+                            };
+                            response = responses[selectedLang];
+                        } 
+                        else if (cmd === 'hello') {
+                            const responses = {
+                                'en': 'Good day. How may I assist you?',
+                                'ru': 'Добрый день. Чем я могу быть полезен?',
+                                'kk': 'Сәлем. Мен қалай көмектесе аламын?',
+                                'es': 'Buenos días. ¿Cómo puedo ayudarte?'
+                            };
+                            response = responses[selectedLang];
+                        }
+                        else if (cmd === 'help') {
+                            const responses = {
+                                'en': 'I can tell you the time, date, or respond to greetings. Just speak clearly.',
+                                'ru': 'Я могу сказать вам время, дату или ответить на приветствие. Говорите четко.',
+                                'kk': 'Мен сізге сағатты, күнді айта аламын немесе сәлемге жауап беремін.',
+                                'es': 'Puedo decirte la hora, la fecha o responder a saludos. Habla claramente.'
+                            };
+                            response = responses[selectedLang];
+                        }
+                        
+                        showResponse(response);
+                        speakResponse(response);
+                        document.getElementById('loading').classList.remove('active');
+                        return;
+                    }
+                }
+            }
+            
+            // Ответ по умолчанию
+            const defaultResponses = {
+                'en': `I heard: "${text}". I can help with time, date, and greetings.`,
+                'ru': `Я услышал: "${text}". Я могу помочь с временем, датой и приветствиями.`,
+                'kk': `Мен естідім: "${text}". Мен сағат, күн және сәлемге көмектесе аламын.`,
+                'es': `Escuché: "${text}". Puedo ayudarte con la hora, fecha y saludos.`
+            };
+            
+            showResponse(defaultResponses[selectedLang]);
+            speakResponse(defaultResponses[selectedLang]);
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        // Отображение сообщений
+        function showMessage(elementId, text, isUser = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.style.color = isUser ? '#4CAF50' : '#fff';
+        }
+
+        function showResponse(text) {
+            document.getElementById('responseText').textContent = text;
+            document.getElementById('response').classList.add('active');
+        }
+
+        function showError(text) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = '⚠️ ' + text;
+            errorMsg.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').classList.remove('show');
+        }
+
+        // Озвучивание ответа
+        function speakResponse(text) {
+            try {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = langCodes[selectedLang];
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.error('Speech synthesis error:', e);
+            }
+        }
+    </script>
+</body>
+</html>
